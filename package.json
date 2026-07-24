@@ -1,0 +1,30 @@
+{
+  "name": "chapar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev --port 1420 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@lucide/svelte": "1.26.0",
+    "@tauri-apps/api": "2.11.1",
+    "monaco-editor": "0.56.0"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-static": "3.0.10",
+    "@sveltejs/kit": "2.70.1",
+    "@sveltejs/vite-plugin-svelte": "7.2.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@tauri-apps/cli": "2.11.4",
+    "svelte": "5.56.7",
+    "svelte-check": "4.7.3",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3",
+    "vite": "8.1.5"
+  }
+}

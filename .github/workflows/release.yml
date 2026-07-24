@@ -1,0 +1,100 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Rust stable
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustc --version
+          cargo --version
+
+      - name: Cache Cargo artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            build-essential \
+            curl \
+            wget \
+            file \
+            pkg-config \
+            libssl-dev \
+            libgtk-3-dev \
+            librsvg2-dev \
+            patchelf \
+            libfuse2 \
+            dpkg \
+            rpm \
+            libwebkit2gtk-4.1-dev \
+            libjavascriptcoregtk-4.1-dev \
+            libsoup-3.0-dev
+
+      - name: Install Node dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Prepare Tauri icons and production config
+        run: |
+          python3 scripts/phase9_final.py --skip-checks
+
+      - name: Build Linux bundles
+        run: |
+          npm run tauri build -- --bundles deb,rpm
+
+      - name: Create GitHub release and upload assets
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+
+          tag="${GITHUB_REF_NAME}"
+
+          gh release create "$tag" --generate-notes --title "$tag" || true
+
+          assets=(
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/rpm/*.rpm
+          )
+
+          if [ ${#assets[@]} -gt 0 ]; then
+            gh release upload "$tag" "${assets[@]}" --clobber
+          else
+            echo "No bundle artifacts found."
+            exit 1
+          fi

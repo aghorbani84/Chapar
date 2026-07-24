@@ -1,0 +1,10 @@
+node_modules/
+/build/
+/.svelte-kit/
+/dist/
+/.env
+/.env.*
+
+# Rust / Tauri
+/src-tauri/target/
+/src-tauri/gen/schemas/
