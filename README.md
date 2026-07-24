@@ -1,253 +1,284 @@
 # Chapar
 
-Chapar is a local-first, security-focused desktop API client.
+A local-first, security-focused desktop API client built with Tauri v2, Rust, SvelteKit, TypeScript, Tailwind CSS, Monaco Editor, SQLite, and the OS keychain.
 
-It is built with Tauri v2, Rust, SvelteKit, TypeScript, Tailwind CSS, Monaco Editor, SQLite, and the OS keychain via <code>keyring</code>.
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Tauri](https://img.shields.io/badge/Tauri-2.x-cyan.svg)](https://tauri.app/)
+[![Rust](https://img.shields.io/badge/Rust-1.85%2B-orange.svg)](https://www.rust-lang.org/)
+
+---
 
 ## Security Model
 
-- HTTP requests are executed only from the Rust backend.
-- Secrets are stored in the OS keychain.
-- Secret values are not stored in SQLite.
-- Secret values are not exported.
-- Secret values are not returned to the normal frontend UI.
-- Requests using unresolved or unauthorized variables are blocked before sending.
-- Diagnostic secret retrieval commands are not exposed in production mode.
+Chapar is designed with security as a first-class concern:
+
+- **Backend Execution**: HTTP requests are executed only from the Rust backend, preventing CORS restrictions and enabling secure secret handling.
+- **Keychain Secrets**: Secrets are stored in the OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service).
+- **No Secret Leakage**: Secret values are never stored in SQLite, never exported, and never returned to the frontend UI.
+- **Injection Validation**: Requests using unresolved or unauthorized variables are blocked before sending.
+- **Production Hardening**: Diagnostic secret retrieval commands (`get_secret`, `store_secret`) are disabled in production builds.
+
+---
 
 ## Tech Stack
 
-- Desktop shell: Tauri v2
-- Backend: Rust
-- HTTP client: reqwest
-- Database: SQLite via rusqlite
-- Secret storage: OS keychain via keyring
-- Frontend: SvelteKit in SPA mode
-- UI styling: Tailwind CSS
-- Editor: Monaco Editor
-- Icons: Lucide
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| Desktop Shell | [Tauri v2](https://tauri.app/) | Cross-platform native desktop app |
+| Backend | Rust | Secure request execution & secret management |
+| HTTP Client | reqwest | Async HTTP client with TLS support |
+| Database | SQLite (rusqlite) | Local persistence for collections, requests, environments |
+| Secret Storage | keyring | OS keychain integration |
+| Frontend | SvelteKit (SPA mode) | Reactive UI framework |
+| Styling | Tailwind CSS v4 | Utility-first CSS framework |
+| Editor | Monaco Editor | Rich text/code editing |
+| Icons | Lucide | Open-source icon library |
+
+---
 
 ## Features
 
-- Collections and saved requests
-- SQLite persistence for non-sensitive data
-- Environment variables
-- Secret vault backed by OS keychain
-- Secret injection into headers
-- Request execution from Rust
-- Response inspector with Monaco Editor
-- Request history
-- Export and import for collections, requests, environments, and secret metadata
-- Production hardening scripts
+- **Collections & Requests**: Organize API calls into named collections with full request management.
+- **SQLite Persistence**: Non-sensitive data persists locally across sessions.
+- **Environment Variables**: Define reusable variables with `{{variable_name}}` syntax.
+- **Secret Vault**: Secure OS keychain integration for sensitive credentials.
+- **Secret Injection**: Inject secrets directly into headers with UI support.
+- **Response Inspector**: View formatted JSON, text, or base64 responses in Monaco.
+- **Request History**: Automatic history tracking (last 200 entries).
+- **Export/Import**: Backup and restore complete workspaces (no secrets exported).
+- **Production Builds**: Hardened builds with secrets isolated from frontend.
 
-## Project Scripts
+---
 
-Phase and maintenance scripts:
+## Quick Start
 
-<pre>
-./scripts/phase0.sh
-./scripts/phase1.sh
-./scripts/phase2.sh
-./scripts/phase3.sh
-./scripts/phase4.sh
-./scripts/phase5.sh
-./scripts/phase6.sh
-./scripts/phase7.sh
-./scripts/phase8.sh
-./scripts/phase9.sh
-</pre>
+### Prerequisites
 
-Final production script:
+- [Rust 1.85+](https://www.rust-lang.org/tools/install)
+- [Node.js 20+](https://nodejs.org/)
+- [Tauri CLI](https://tauri.app/v1/guides/getting-started/prerequisites)
 
-<pre>
-python3 scripts/phase9_final.py
-</pre>
+### Development
 
-Final verification:
-
-<pre>
-python3 scripts/final_check.py
-</pre>
-
-## Development
-
-Install dependencies if needed:
-
-<pre>
+```bash
+# Install dependencies
 npm install
-</pre>
 
-Start the app in development mode:
-
-<pre>
+# Start in development mode (Tauri + dev server on port 1420)
 npm run tauri dev
-</pre>
+```
 
-## Environment Variables
+### Build
 
-Environment variables use this syntax:
+```bash
+# Production build
+npm run build
 
-<pre>
-{{base_url}}
-</pre>
+# Preview build locally
+npm run preview
+```
 
-Example environment variable:
+---
 
-<pre>
+## Configuration
+
+### Environment Variables
+
+Define environment variables using the `{{name}}` syntax:
+
+```
+# Environment definition
 base_url = http://localhost:8080
-</pre>
 
-Then request:
-
-<pre>
+# In request URL field
 {{base_url}}/users
-</pre>
+```
 
-Chapar resolves it to:
+Result: `http://localhost:8080/users`
 
-<pre>
-http://localhost:8080/users
-</pre>
+Missing variables are blocked before request execution.
 
-Missing variables are blocked before the request is sent.
+### Secrets
 
-## Secrets
+Secrets use the `{{secret:id}}` syntax or can be attached to headers via the UI:
 
-Secrets use this syntax:
+```
+# Secret references in request
+Authorization: Bearer {{secret:api-key}}
 
-<pre>
-{{secret:prod-api-key}}
-</pre>
+# Header secret selector
+X-API-Key: {{secret:prod-secret}}
+```
 
-Secrets can also be attached directly to a header using the header secret selector.
+**Secret Storage**:
 
-Secret values are stored in the OS keychain.
+- Secrets are stored exclusively in the OS keychain
+- Only metadata (ID, label, timestamp) is stored in SQLite
+- Secret values are never exported or exposed to frontend
 
-Only secret metadata is stored in SQLite:
+---
 
-- secret ID
-- secret label
-- created date
+## Project Structure
 
-Secret values are not exported.
+```
+├── src/                    # Frontend (SvelteKit)
+│   ├── lib/               # Shared components & stores
+│   │   ├── components/    # UI components
+│   │   ├── services/      # API service layer
+│   │   ├── stores/        # Svelte stores
+│   │   └── types/         # TypeScript interfaces
+│   └── routes/            # SvelteKit pages
+├── src-tauri/             # Backend (Rust)
+│   ├── src/
+│   │   ├── commands/      # Tauri command handlers
+│   │   ├── db.rs         # SQLite operations
+│   │   ├── env.rs        # Variable resolution
+│   │   ├── http.rs       # HTTP execution engine
+│   │   ├── vault.rs      # Keychain operations
+│   │   └── models.rs     # Data structures
+│   └── Cargo.toml
+├── build/                 # Build output directory
+├── docs/                  # Documentation
+└── scripts/               # Build & production scripts
+```
 
-## Request History
+---
 
-Executed requests are automatically saved to history.
+## API Reference
 
-History entries can be:
+### Backend Commands
 
-- viewed
-- inspected
-- loaded back into the request editor
-- cleared
+| Command | Description |
+|---------|-------------|
+| `list_environments` | Get all environments |
+| `save_environment` | Create/update environment |
+| `delete_environment` | Remove environment |
+| `set_active_environment` | Set active environment |
+| `list_collections` | Get all collections |
+| `create_collection` | Create new collection |
+| `list_requests` | Get requests in collection |
+| `save_request` | Save/update request |
+| `execute_request` | Execute HTTP request |
+| `list_history` | Get request history |
+| `list_secret_metadata` | Get secret metadata only |
+| `save_secret` | Store secret in keychain |
+| `delete_secret` | Remove secret from keychain |
 
-History is pruned automatically to the most recent 200 entries.
+### Frontend API Service
 
-## Export and Import
+```typescript
+import { api } from '$lib/services/api';
 
-Chapar can export:
+// Execute request
+const response = await api.executeRequest({
+  request: myRequest,
+  environmentId: 'env-id',
+  timeoutMs: 5000,
+  followRedirects: true,
+  maxRedirects: 10
+});
+```
 
-- collections
-- requests
-- environments
-- secret metadata
-
-Chapar does not export secret values.
-
-Exported data can be imported again from the Data panel.
+---
 
 ## Production Build
 
-Run final checks:
+### Final Verification
 
-<pre>
+```bash
+# Run comprehensive checks
 python3 scripts/final_check.py
-</pre>
+```
 
-Create a production bundle:
+### Release Script
 
-<pre>
+```bash
+# Create full production bundle
 ./scripts/release.sh
-</pre>
 
-Create a faster debug bundle:
-
-<pre>
+# Create debug bundle for testing
 ./scripts/release.sh -- --debug
-</pre>
+```
 
-## Production Secret Commands
+### Production Commands
 
-The following diagnostic commands are not exposed to the frontend in production mode:
+The following diagnostic commands are only available in development:
 
-<pre>
-get_secret
-store_secret
-</pre>
+- `get_secret` - Retrieve secret value
+- `store_secret` - Store secret directly
 
-Secrets are managed through:
+In production, manage secrets via:
 
-<pre>
-save_secret
-delete_secret
-secret_exists
-list_secret_metadata
-</pre>
+- `save_secret`
+- `delete_secret`
+- `secret_exists`
+- `list_secret_metadata`
 
-Secret values are injected only inside Rust during request execution.
+---
+
+## Data Flow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Frontend (SvelteKit)                    │
+│                                                             │
+│  Request Editor → Request Payload → Tauri API → Rust     │
+│                             ↓                               │
+│                   ┌─────────────────┐                      │
+│                   │   Rust Backend  │                      │
+│                   │                 │                      │
+│                   │ - Validate vars │                      │
+│                   │ - Inject secrets│                      │
+│                   │ - Execute HTTP  │                      │
+│                   │ - Store history │                      │
+│                   └────────┬────────┘                      │
+│                            ↓                               │
+│                  Tauri IPC Transport                      │
+│                            ↓                               │
+│                   ┌─────────────────┐                      │
+│                   │  reqwest Engine │                      │
+│                   └────────┬────────┘                      │
+│                            ↓                               │
+│                    Remote API Server                        │
+│                                                             │
+│  Response ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+│                                                             │
+│        Response Inspector (Monaco Editor)                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Development Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start SvelteKit dev server (port 1420) |
+| `npm run build` | Build for production |
+| `npm run tauri dev` | Full Tauri development mode |
+| `npm run tauri build` | Create production bundle |
+
+---
 
 ## Local Documentation
 
-A local HTML documentation file is generated at:
+Complete HTML documentation is generated at:
 
-<pre>
-docs/chapar.html
-</pre>
+- [docs/chapar.html](docs/chapar.html) - Main documentation
+- [docs/readme_generator.html](docs/readme_generator.html) - README generator tool
 
-This README generator is located at:
+---
 
-<pre>
-docs/readme_generator.html
-</pre>
+## License
 
-## Phase Status
+MIT License - See [LICENSE](LICENSE) for details.
 
-<pre>
-Phase 0: Architectural skeleton              Complete
-Phase 1: Scaffolding and SQLite setup         Complete
-Phase 2: Keyring secret storage               Complete
-Phase 3: Rust HTTP engine                     Complete
-Phase 4: Frontend UI and Monaco               Complete
-Phase 5: Environment variables                Complete
-Phase 6: Collections and request persistence  Complete
-Phase 7: Secure vault UI and secret injection Complete
-Phase 8: History, export, import              Complete
-Phase 9: Production hardening                 Complete
-</pre>
+---
 
-## Recommended Final Verification
+## Contributing
 
-Run:
+This is an internal project. For questions or issues, refer to the documentation or contact the development team.
 
-<pre>
-python3 scripts/final_check.py
-</pre>
+---
 
-Then start the app:
-
-<pre>
-npm run tauri dev
-</pre>
-
-Verify:
-
-1. Collections can be created.
-2. Requests can be saved.
-3. Requests persist after restart.
-4. Environment variables resolve correctly.
-5. Secrets can be stored.
-6. Secrets are injected into headers.
-7. Missing variables are blocked.
-8. History appears after sending requests.
-9. Export produces JSON.
-10. Import restores data.
+**Note**: This README will also be generated automatically by the built-in README generator in `docs/readme_generator.html`.
