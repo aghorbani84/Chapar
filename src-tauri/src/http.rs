@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
+/// Upper bound for a single response body held in memory (64 MiB).
+/// Prevents a hostile or misbehaving server from exhausting memory.
+const MAX_RESPONSE_BODY_BYTES: usize = 64 * 1024 * 1024;
+
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue, CONTENT_TYPE, USER_AGENT};
 use reqwest::redirect::Policy;
@@ -346,7 +350,7 @@ pub async fn execute_request(
 
     let started = Instant::now();
 
-    let response = match request_builder.send().await {
+    let mut response = match request_builder.send().await {
         Ok(response) => response,
         Err(_) => {
             return Ok(error_response(
@@ -373,16 +377,32 @@ pub async fn execute_request(
         })
         .collect();
 
-    let bytes = match response.bytes().await {
-        Ok(bytes) => bytes,
-        Err(_) => {
-            return Ok(error_response(
-                &request.id,
-                unresolved,
-                "failed to read response body",
-            ))
+    let mut bytes = Vec::new();
+    let mut body_error = false;
+
+    while let Some(chunk) = response.chunk().await {
+        match chunk {
+            Ok(chunk) => {
+                if bytes.len() + chunk.len() > MAX_RESPONSE_BODY_BYTES {
+                    body_error = true;
+                    break;
+                }
+                bytes.extend_from_slice(&chunk);
+            }
+            Err(_) => {
+                body_error = true;
+                break;
+            }
         }
-    };
+    }
+
+    if body_error {
+        return Ok(error_response(
+            &request.id,
+            unresolved,
+            "failed to read response body or response exceeds maximum size",
+        ))
+    }
 
     let latency_ms = started.elapsed().as_millis() as u64;
     let size_bytes = bytes.len() as u64;
