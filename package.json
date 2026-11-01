@@ -13,7 +13,7 @@
   "dependencies": {
     "@lucide/svelte": "1.26.0",
     "@tauri-apps/api": "2.11.1",
-    "monaco-editor": "0.56.0"
+    "monaco-editor": "0.57.0"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.10",
